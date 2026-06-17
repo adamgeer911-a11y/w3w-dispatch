@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>911 CAD — Inbound Trigger</title>
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+<style>
+:root,[data-theme="light"]{
+  --bg:#f2f0ea;--surface:#faf8f4;--surface2:#f0ede6;--surface3:#e8e4dc;--border:#d5cec4;
+  --text:#1a1814;--muted:#706b63;--primary:#0c6668;--primaryh:#094d4f;--success:#3f7326;--error:#9e2d67;
+  --shadow-md:0 6px 24px rgba(0,0,0,.12)
+}
+[data-theme="dark"]{
+  --bg:#0a0b0e;--surface:#111318;--surface2:#161820;--surface3:#1d2029;--border:#2e3240;
+  --text:#edeef5;--muted:#9599ae;--primary:#2a7de0;--primaryh:#3c8cf0;--success:#21c57b;--error:#ff4b6a;--warn:#ffb545;
+  --shadow-md:0 8px 28px rgba(0,0,0,.65)
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased}
+body{font-family:'Satoshi',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at top right,rgba(42,125,224,.12),transparent 50%)}
+.wrap{position:relative;z-index:1;width:min(600px,100%);display:grid;gap:16px}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.kicker{font-size:9px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.kicker::before{content:'';display:inline-block;width:6px;height:6px;border-radius:1px;background:#21c57b;box-shadow:0 0 6px rgba(33,197,123,.9);margin-right:6px}
+h1{font-size:22px;letter-spacing:.18em;text-transform:uppercase;margin:4px 0}
+.subtitle{color:var(--muted);font-size:13px}
+.card{background:linear-gradient(180deg,var(--surface2),var(--surface3));border:1px solid rgba(255,255,255,.04);border-radius:10px;padding:14px;box-shadow:var(--shadow-md)}
+label{display:block;font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+select,textarea,input{width:100%;padding:8px 10px;border-radius:5px;border:1px solid rgba(255,255,255,.06);background:radial-gradient(circle at top left,rgba(255,255,255,.04),rgba(0,0,0,.7));color:var(--text);font:inherit;font-size:13px;margin-bottom:12px}
+[data-theme="light"] select,[data-theme="light"] textarea,[data-theme="light"] input{background:rgba(255,255,255,.7);border-color:var(--border)}
+select:focus,textarea:focus,input:focus{outline:none;border-color:rgba(42,125,224,.8);box-shadow:0 0 0 3px rgba(42,125,224,.22)}
+textarea{min-height:160px;resize:vertical;font-family:ui-monospace,monospace;font-size:12px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{min-height:34px;padding:7px 12px;border-radius:4px;border:1px solid rgba(255,255,255,.05);background:var(--surface3);color:var(--text);font:inherit;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;cursor:pointer}
+.btn:hover{filter:brightness(1.15)}
+.btn.primary{background:linear-gradient(180deg,var(--primaryh),var(--primary));border-color:rgba(58,140,240,.7);color:#fff}
+.btn.danger{background:linear-gradient(180deg,rgba(255,75,106,.9),rgba(210,40,70,.9));border-color:rgba(255,75,106,.7);color:#fff}
+.log{max-height:210px;overflow:auto;border:1px solid rgba(255,255,255,.04);border-radius:7px;background:radial-gradient(circle at top,#141620,#08090e)}
+[data-theme="light"] .log{background:var(--surface);border-color:var(--border)}
+.log table{width:100%;border-collapse:collapse}
+.log td,.log th{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.03);font-size:11px;text-align:left}
+[data-theme="light"] .log td,[data-theme="light"] .log th{border-bottom:1px solid var(--border)}
+.log th{font-size:9px;text-transform:uppercase;letter-spacing:.18em;color:var(--muted);position:sticky;top:0;background:#0f1118}
+[data-theme="light"] .log th{background:var(--surface)}
+.dot{width:7px;height:7px;border-radius:2px;display:inline-block;margin-right:5px;vertical-align:middle;background:var(--success);box-shadow:0 0 5px rgba(33,197,123,.8)}
+.sent-banner{padding:7px 10px;border-radius:6px;background:rgba(33,197,123,.18);border:1px solid rgba(33,197,123,.4);color:var(--success);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;display:none;margin-top:2px}
+.themetoggle{background:none;border:1px solid rgba(255,255,255,.08);padding:6px 9px;border-radius:5px;cursor:pointer;font-size:13px;color:var(--muted);line-height:1}
+[data-theme="light"] .themetoggle{border-color:var(--border)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <div class="kicker">911 CAD Training System</div>
+      <h1>Inbound Trigger</h1>
+      <div class="subtitle">Inject mock ANI/ALI into the console tab</div>
+    </div>
+    <button class="themetoggle" id="themeBtn" aria-label="Toggle theme">&#9680;</button>
+  </div>
+  <div class="card">
+    <label>Scenario preset</label>
+    <select id="scenario">
+      <option value="inside">Wireless — Inside Fence</option>
+      <option value="outside">Wireless — Outside Fence</option>
+      <option value="landline">Landline</option>
+    </select>
+    <label>ANI / ALI Payload</label>
+    <textarea id="payload" spellcheck="false">ANI: 4235550148
+ALI_NAME: TEST CALLER
+CALL_TYPE: MOCK WIRELESS
+LAT: 35.0745
+LON: -85.6261
+ADDRESS: 123 Main St Jasper TN</textarea>
+    <div id="sentBanner" class="sent-banner">Call injected — check console tab</div>
+    <div class="btns" style="margin-top:4px">
+      <button class="btn primary" id="fireBtn">Trigger Inbound Call</button>
+      <button class="btn" id="loadBtn">Load Scenario</button>
+      <button class="btn danger" id="clearBtn">Clear Queue</button>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <label style="margin:0">Sent call log</label>
+      <span id="queueCount" style="font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.12em;text-transform:uppercase">0 queued</span>
+    </div>
+    <div class="log">
+      <table>
+        <thead><tr><th>Time</th><th>ANI</th><th>Type</th><th>Status</th></tr></thead>
+        <tbody id="logBody"><tr><td colspan="4" style="color:var(--muted)">No calls triggered yet.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div style="font-size:11px;color:var(--muted);text-align:center;letter-spacing:.06em">Open <strong>index.html</strong> (console) in another tab — calls appear automatically every second</div>
+</div>
+<script>
+(function(){
+  const html=document.documentElement;
+  html.dataset.theme=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+  document.getElementById('themeBtn').onclick=()=>
+    html.dataset.theme=html.dataset.theme==='dark'?'light':'dark';
+})();
+const $=id=>document.getElementById(id);
+const scenarios={
+  inside:'ANI: 4235550148\nALI_NAME: TEST CALLER\nCALL_TYPE: MOCK WIRELESS\nLAT: 35.0745\nLON: -85.6261\nADDRESS: 123 Main St Jasper TN',
+  outside:'ANI: 4235550199\nALI_NAME: TEST OUTSIDE\nCALL_TYPE: MOCK OUTSIDE\nLAT: 35.0684\nLON: -85.6120\nADDRESS: 50 Sample Rd Jasper TN',
+  landline:'ANI: 4235550111\nALI_NAME: TEST LANDLINE\nCALL_TYPE: LANDLINE\nLAT: 35.0762\nLON: -85.6287\nADDRESS: 88 River View Dr Jasper TN'
+};
+let callLog=[];
+function getQueue(){try{return JSON.parse(sessionStorage.getItem('cad_queue')||'[]');}catch(e){return[];}}
+function setQueue(q){try{sessionStorage.setItem('cad_queue',JSON.stringify(q));}catch(e){}}
+function renderLog(){
+  $('queueCount').textContent=getQueue().length+' queued';
+  $('logBody').innerHTML=callLog.length
+    ?[...callLog].reverse().map(r=>'<tr><td>'+r.time+'</td><td style="font-family:monospace">'+r.ani+'</td><td>'+r.type+'</td><td><span class="dot"></span>Sent</td></tr>').join('')
+    :'<tr><td colspan="4" style="color:var(--muted)">No calls triggered yet.</td></tr>';
+}
+$('scenario').onchange=()=>$('payload').value=(scenarios[$('scenario').value]||'').replace(/\n/g,'\n');
+$('loadBtn').onclick=()=>$('payload').value=(scenarios[$('scenario').value]||'').replace(/\n/g,'\n');
+$('clearBtn').onclick=()=>{setQueue([]);renderLog();};
+$('fireBtn').onclick=()=>{
+  const text=$('payload').value.trim();if(!text)return;
+  const get=r=>(text.match(r)||[])[1]?.trim()||'';
+  const ani=get(/ANI\s*[:=]\s*([^\n]+)/i)||'Unknown';
+  const type=get(/CALL_TYPE\s*[:=]\s*([^\n]+)/i)||'Unknown';
+  const call={id:Date.now(),payload:text,time:new Date().toLocaleTimeString()};
+  const q=getQueue();q.push(call);setQueue(q);
+  callLog.push({time:call.time,ani,type});
+  const b=$('sentBanner');b.style.display='block';
+  setTimeout(()=>b.style.display='none',2800);
+  renderLog();
+};
+renderLog();
+</script>
+</body>
+</html>

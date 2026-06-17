@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>911 CAD Console</title>
+<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+<style>
+:root,[data-theme="light"]{
+  --bg:#f4f1eb;--surface:#faf8f4;--surface2:#f2eee7;--surface3:#ece6de;--offset:#e6dfd6;--border:#d5cec4;
+  --text:#211d17;--muted:#706b63;--faint:#9b958b;--primary:#0c6668;--primaryh:#094d4f;--success:#3f7326;--error:#9e2d67;--warn:#8e511f;
+  --accentwash:rgba(12,102,104,.08);--successwash:rgba(63,115,38,.10);--errorwash:rgba(158,45,103,.10);
+  --radius-sm:6px;--radius-lg:10px;--font:'Satoshi',system-ui,sans-serif;
+  --shadow-sm:0 1px 2px rgba(31,29,24,.05);--shadow-md:0 8px 24px rgba(31,29,24,.08);--shadow-lg:0 16px 50px rgba(31,29,24,.12);
+}
+[data-theme="dark"]{
+  --bg:#0a0b0e;--surface:#111318;--surface2:#161820;--surface3:#1d2029;--offset:#242835;--border:#2e3240;
+  --text:#edeef5;--muted:#9599ae;--faint:#5a5e70;--primary:#2a7de0;--primaryh:#3c8cf0;--success:#21c57b;--error:#ff4b6a;--warn:#ffb545;
+  --accentwash:rgba(42,125,224,.16);--successwash:rgba(33,197,123,.16);--errorwash:rgba(255,75,106,.16);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.6);--shadow-md:0 10px 30px rgba(0,0,0,.55);--shadow-lg:0 16px 40px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.4}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;background:
+  radial-gradient(circle at top right,rgba(42,125,224,.12),transparent 40%),
+  radial-gradient(circle at bottom left,rgba(12,102,104,.1),transparent 35%)}
+button,input,textarea,select{font:inherit;color:inherit} button{cursor:pointer}
+.app{position:relative;display:grid;grid-template-columns:minmax(380px,420px) minmax(0,1fr);height:100dvh}
+.phone{position:relative;z-index:1;background:color-mix(in srgb,var(--surface) 96%,transparent);backdrop-filter:blur(18px);border-right:1px solid var(--border);overflow:auto;padding:14px 16px;display:grid;gap:10px;box-shadow:12px 0 32px rgba(0,0,0,.4)}
+.mapWrap{position:relative;z-index:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+#map{flex:1 1 0;min-height:0;width:100%;display:block}
+.bottomPane{flex:0 0 265px;border-top:1px solid var(--border);background:linear-gradient(180deg,var(--surface2),var(--surface));padding:12px 14px;overflow:auto}
+.card{background:linear-gradient(180deg,var(--surface2),var(--surface3));border:1px solid rgba(255,255,255,.03);border-radius:var(--radius-lg);padding:11px 12px;box-shadow:var(--shadow-sm)}
+.heroCard{border-radius:var(--radius-lg);background:radial-gradient(circle at top left,rgba(42,125,224,.2),transparent 60%),linear-gradient(180deg,var(--surface2),var(--surface3));border:1px solid rgba(42,125,224,.45);box-shadow:0 0 0 1px rgba(0,0,0,.7),var(--shadow-md)}
+.kicker{display:inline-flex;align-items:center;gap:6px;font-size:9px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+.kicker::before{content:'';width:7px;height:7px;border-radius:2px;background:#21c57b;box-shadow:0 0 7px rgba(33,197,123,.9)}
+.heroTitle{margin:5px 0 3px;font-size:19px;line-height:1.05;letter-spacing:.2em;text-transform:uppercase}
+.heroSub{color:var(--muted);font-size:11px;max-width:38ch}
+.sh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.sh strong{font-size:10px;text-transform:uppercase;letter-spacing:.18em;color:var(--text)}
+.btns{display:flex;gap:6px;flex-wrap:wrap}
+.btn{min-height:30px;padding:5px 9px;border-radius:4px;border:1px solid rgba(255,255,255,.04);background:var(--offset);color:var(--text);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.1em;box-shadow:inset 0 -1px 0 rgba(0,0,0,.5)}
+.btn:hover{filter:brightness(1.15)}
+.btn.primary{background:linear-gradient(180deg,var(--primaryh),var(--primary));border-color:rgba(42,125,224,.7);color:#fff}
+.btn.ghost{background:linear-gradient(180deg,var(--surface3),var(--surface2));border-color:rgba(255,255,255,.06)}
+.btn.small{min-height:26px;padding:4px 8px;font-size:10px}
+.inp,textarea,select{width:100%;padding:7px 9px;border-radius:5px;border:1px solid rgba(255,255,255,.05);background:radial-gradient(circle at top left,rgba(255,255,255,.04),rgba(0,0,0,.75));color:var(--text);font-size:12px}
+[data-theme="light"] .inp,[data-theme="light"] textarea,[data-theme="light"] select{background:rgba(255,255,255,.7);border-color:var(--border)}
+.inp:focus,textarea:focus,select:focus{outline:none;border-color:rgba(42,125,224,.8);box-shadow:0 0 0 3px rgba(42,125,224,.22)}
+textarea{min-height:110px;resize:vertical;font-family:ui-monospace,monospace;font-size:11px}
+.mono{font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.statusgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.status{padding:7px 9px;border-radius:6px;background:linear-gradient(180deg,var(--surface3),var(--surface2));border:1px solid rgba(255,255,255,.04)}
+.status strong{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.18em;color:var(--muted)}
+.big{font-size:17px;font-weight:700;margin-top:3px;letter-spacing:.1em;text-transform:uppercase}
+.true{color:var(--success)} .false{color:var(--error)} .unknown{color:var(--warn)}
+.alertBanner{position:absolute;left:0;right:0;top:0;z-index:700;background:linear-gradient(90deg,rgba(33,197,123,.25),rgba(10,16,18,.95));border-bottom:2px solid rgba(33,197,123,.9);color:var(--success);padding:6px 14px;font-weight:800;font-size:12px;letter-spacing:.2em;text-transform:uppercase;display:none}
+.mapTopbar{position:absolute;left:0;right:0;top:0;z-index:650;display:flex;justify-content:space-between;gap:10px;padding:6px 14px;background:linear-gradient(90deg,rgba(0,0,0,.9),rgba(8,10,20,.88));border-bottom:1px solid rgba(255,255,255,.07)}
+.mapChip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.dotLive{width:7px;height:7px;border-radius:2px;background:var(--success);box-shadow:0 0 6px rgba(33,197,123,.9)}
+.log{max-height:195px;overflow:auto;border:1px solid rgba(255,255,255,.04);border-radius:7px;background:radial-gradient(circle at top,#141620,#08090e)}
+[data-theme="light"] .log{background:var(--surface);border-color:var(--border)}
+.log table{width:100%;border-collapse:collapse}
+.log td,.log th{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.03);text-align:left;vertical-align:top;font-size:11px}
+[data-theme="light"] .log td,[data-theme="light"] .log th{border-bottom:1px solid var(--border)}
+.log th{font-size:9px;text-transform:uppercase;letter-spacing:.18em;color:var(--muted);position:sticky;top:0;background:#101118}
+[data-theme="light"] .log th{background:var(--surface)}
+.fenceList,.attachmentList{display:grid;gap:6px}
+.item{padding:7px 9px;border:1px solid rgba(255,255,255,.04);border-radius:6px;background:linear-gradient(180deg,var(--surface3),var(--surface2))}
+[data-theme="light"] .item{background:var(--surface);border-color:var(--border)}
+.pill{display:inline-flex;align-items:center;border-radius:4px;padding:3px 6px;background:var(--offset);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);border:1px solid rgba(255,255,255,.05)}
+.modalBack{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
+.modal{width:min(760px,100%);background:radial-gradient(circle at top left,#191b26,#08080d);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px 15px;box-shadow:var(--shadow-lg);max-height:90dvh;overflow:auto}
+[data-theme="light"] .modal{background:var(--surface)}
+.previewBox{margin-top:7px;padding:7px 9px;border:1px dashed rgba(255,255,255,.16);border-radius:7px;background:radial-gradient(circle at top,#161925,#0e0f16);white-space:pre-wrap;font-size:11px}
+[data-theme="light"] .previewBox{background:var(--surface2);border-color:var(--border)}
+.dualCol{display:grid;grid-template-columns:1.1fr .9fr;gap:10px;margin-top:10px}
+label{display:block;margin-bottom:4px;font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.incomingStrip{display:none;position:relative;z-index:2;background:linear-gradient(90deg,rgba(255,181,69,.2),rgba(10,14,20,.96));border-bottom:2px solid rgba(255,181,69,.9);padding:8px 14px;font-weight:800;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--warn);animation:pulseStrip 1s ease-in-out infinite}
+@keyframes pulseStrip{0%,100%{opacity:1}50%{opacity:.7}}
+@media(max-width:1000px){.app{grid-template-columns:1fr;grid-template-rows:auto 56dvh}.phone{border-right:none;border-bottom:1px solid var(--border)}.bottomPane{flex:0 0 44%}.dualCol{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="phone">
+    <div class="card heroCard">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+        <div>
+          <div class="kicker">911 CAD Training Console</div>
+          <h1 class="heroTitle">CAD Console</h1>
+          <div class="heroSub">Geofence mapping, ANI/ALI parsing, what3words lookup &amp; incident timeline</div>
+        </div>
+        <button class="btn ghost small" id="themeBtn" aria-label="Toggle theme">&#9680;</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sh"><strong>&#9881; Settings</strong></div>
+      <label>what3words API Key</label>
+      <input class="inp" id="w3wKey" type="password" placeholder="Enter your w3w API key" autocomplete="off"/>
+      <label style="margin-top:8px">Console URL (for trigger cross-tab)</label>
+      <input class="inp" id="consoleUrl" readonly value="This tab" style="color:var(--muted)"/>
+    </div>
+    <div class="card">
+      <div class="sh"><strong>&#9678; Manual ANI/ALI</strong><button class="btn ghost small" id="sampleBtn">Load Sample</button></div>
+      <textarea id="aliInput" placeholder="Paste ANI/ALI payload here&#10;&#10;ANI: 4235550148&#10;LAT: 35.0745&#10;LON: -85.6261"></textarea>
+      <div class="btns">
+        <button class="btn primary" id="parseBtn">Parse &amp; Drop Pin</button>
+        <button class="btn ghost" id="clearPinBtn">Clear Pin</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sh"><strong>&#9678; Live Status</strong></div>
+      <div class="statusgrid">
+        <div class="status"><strong>Coordinate</strong><div class="big mono" id="sCoord">—</div></div>
+        <div class="status"><strong>W3W Address</strong><div class="big" id="sW3W" style="font-size:13px;word-break:break-word">—</div></div>
+        <div class="status"><strong>In Geofence</strong><div class="big" id="sGeo">—</div></div>
+        <div class="status"><strong>ANI</strong><div class="big mono" id="sANI">—</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sh"><strong>&#9670; Active Fences</strong><button class="btn ghost small" id="clearFencesBtn">Clear All</button></div>
+      <div class="fenceList" id="fenceList"><div class="muted" style="font-size:12px;padding:6px 0">Draw a rectangle or polygon on the map.</div></div>
+    </div>
+    <div class="card">
+      <div class="sh"><strong>&#9776; Incident Log</strong><span class="pill" id="logCount">0</span></div>
+      <div class="log"><table><thead><tr><th>Time</th><th>ANI</th><th>W3W</th><th>Fence</th></tr></thead><tbody id="incidentLog"><tr><td colspan="4" style="color:var(--muted)">No incidents yet.</td></tr></tbody></table></div>
+    </div>
+  </section>
+  <div class="mapWrap">
+    <div class="incomingStrip" id="incomingStrip">&#9675; Incoming Call</div>
+    <div style="position:relative;flex:1 1 0;min-height:0">
+      <div class="alertBanner" id="alertBanner"></div>
+      <div class="mapTopbar">
+        <div style="display:flex;gap:12px;align-items:center">
+          <span class="mapChip"><span class="dotLive"></span>Live Map</span>
+          <span class="mapChip" id="fenceCount">0 Fences</span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn ghost small" id="w3wGridBtn">W3W Grid</button>
+          <button class="btn ghost small" id="listWordsBtn">List Words</button>
+        </div>
+      </div>
+      <div id="map"></div>
+    </div>
+    <div class="bottomPane">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <strong style="font-size:10px;text-transform:uppercase;letter-spacing:.18em">Parsed Payload</strong>
+        <span class="pill" id="payloadStatus">awaiting</span>
+      </div>
+      <div class="dualCol">
+        <div>
+          <label>Raw Payload</label>
+          <div class="previewBox" id="rawPayload" style="margin:0;min-height:60px;max-height:140px;overflow:auto">—</div>
+        </div>
+        <div style="display:grid;gap:7px">
+          <div><label>Name</label><div class="item mono" id="pName">—</div></div>
+          <div><label>Address</label><div class="item mono" id="pAddr">—</div></div>
+          <div><label>Call Type</label><div class="item" id="pType">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Word List Modal -->
+<div class="modalBack" id="wordModal">
+  <div class="modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.18em">W3W Grid — Possible Addresses in Fence</strong>
+      <button class="btn ghost small" id="closeModal">Close</button>
+    </div>
+    <div id="wordList" style="font-size:12px;color:var(--muted);font-family:ui-monospace,monospace">Select a fence and click "List Words" to enumerate w3w cells.</div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script>
+(function(){
+  const html=document.documentElement;
+  let theme=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
+  html.dataset.theme=theme;
+  document.getElementById('themeBtn').onclick=()=>{
+    theme=theme==='dark'?'light':'dark';
+    html.dataset.theme=theme;
+  };
+})();
+const $=id=>document.getElementById(id);
+const map=L.map('map',{zoomControl:false,attributionControl:true}).setView([35.0745,-85.6261],14);
+L.control.zoom({position:'bottomright'}).addTo(map);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
+const drawnItems=new L.FeatureGroup().addTo(map);
+new L.Control.Draw({edit:{featureGroup:drawnItems},draw:{circle:false,circlemarker:false,marker:false,polyline:false,polygon:{shapeOptions:{color:'#2a7de0',fillOpacity:.08}},rectangle:{shapeOptions:{color:'#2a7de0',fillOpacity:.08}}}}).addTo(map);
+let pin=null,fences=[],incidents=[];
+function getKey(){return $('w3wKey').value.trim();}
+function showAlert(msg,type='success'){
+  const b=$('alertBanner');
+  b.textContent=msg;
+  b.style.display='block';
+  b.style.background=type==='success'?'linear-gradient(90deg,rgba(33,197,123,.25),rgba(10,16,18,.95))':'linear-gradient(90deg,rgba(255,75,106,.25),rgba(10,16,18,.95))';
+  b.style.borderBottomColor=type==='success'?'rgba(33,197,123,.9)':'rgba(255,75,106,.9)';
+  b.style.color=type==='success'?'var(--success)':'var(--error)';
+  clearTimeout(b._t);
+  b._t=setTimeout(()=>b.style.display='none',3500);
+}
+function ptInPolygon(point,layer){
+  if(layer instanceof L.Rectangle||layer instanceof L.Polygon){
+    const latlngs=layer.getLatLngs()[0];
+    const x=point.lat,y=point.lng;
+    let inside=false;
+    for(let i=0,j=latlngs.length-1;i<latlngs.length;j=i++){
+      const xi=latlngs[i].lat,yi=latlngs[i].lng;
+      const xj=latlngs[j].lat,yj=latlngs[j].lng;
+      if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))inside=!inside;
+    }
+    return inside;
+  }
+  return false;
+}
+function checkFences(latlng){
+  for(const f of fences){
+    if(ptInPolygon(latlng,f.layer))return f.name;
+  }
+  return null;
+}
+function updateFenceUI(){
+  $('fenceCount').textContent=fences.length+' Fence'+(fences.length===1?'':'s');
+  const list=$('fenceList');
+  if(!fences.length){list.innerHTML='<div class="muted" style="font-size:12px;padding:6px 0">Draw a rectangle or polygon on the map.</div>';return;}
+  list.innerHTML=fences.map((f,i)=>`<div class="item" style="display:flex;justify-content:space-between;align-items:center"><span class="mono" style="font-size:12px">${f.name}</span><button class="btn ghost small" onclick="removeFence(${i})">Remove</button></div>`).join('');
+}
+window.removeFence=function(i){
+  drawnItems.removeLayer(fences[i].layer);
+  fences.splice(i,1);
+  updateFenceUI();
+};
+map.on(L.Draw.Event.CREATED,function(e){
+  const layer=e.layer;
+  drawnItems.addLayer(layer);
+  const name='Fence '+(fences.length+1);
+  fences.push({layer,name});
+  updateFenceUI();
+});
+map.on(L.Draw.Event.DELETED,function(e){
+  e.layers.eachLayer(l=>{
+    const idx=fences.findIndex(f=>f.layer===l);
+    if(idx>-1)fences.splice(idx,1);
+  });
+  updateFenceUI();
+});
+$('clearFencesBtn').onclick=()=>{drawnItems.clearLayers();fences=[];updateFenceUI();};
+async function lookupW3W(lat,lng){
+  const key=getKey();
+  if(!key)return null;
+  try{
+    const r=await fetch(`https://api.what3words.com/v3/convert-to-3wa?coordinates=${lat},${lng}&key=${key}`);
+    const d=await r.json();
+    return d.words||null;
+  }catch(e){return null;}
+}
+async function dropPin(lat,lng,payload){
+  if(pin)map.removeLayer(pin);
+  const latlng=L.latLng(lat,lng);
+  const inFence=checkFences(latlng);
+  const icon=L.divIcon({html:`<div style="width:14px;height:14px;border-radius:50%;background:${inFence?'#21c57b':'#ff4b6a'};border:2px solid #fff;box-shadow:0 0 8px rgba(0,0,0,.8)"></div>`,className:'',iconAnchor:[7,7]});
+  pin=L.marker(latlng,{icon}).addTo(map);
+  map.setView(latlng,15);
+  const get=r=>(payload.match(r)||[])[1]?.trim()||'Unknown';
+  const ani=get(/ANI\s*[:=]\s*([^\n]+)/i);
+  const name=get(/ALI_NAME\s*[:=]\s*([^\n]+)/i);
+  const addr=get(/ADDRESS\s*[:=]\s*([^\n]+)/i);
+  const type=get(/CALL_TYPE\s*[:=]\s*([^\n]+)/i);
+  $('sCoord').textContent=`${lat.toFixed(5)},${lng.toFixed(5)}`;
+  $('sANI').textContent=ani;
+  $('pName').textContent=name;
+  $('pAddr').textContent=addr;
+  $('pType').textContent=type;
+  $('rawPayload').textContent=payload;
+  $('payloadStatus').textContent='parsed';
+  const geoEl=$('sGeo');
+  if(inFence){geoEl.textContent='YES';geoEl.className='big true';}else{geoEl.textContent='NO';geoEl.className='big false';}
+  const w3wWords=await lookupW3W(lat,lng);
+  $('sW3W').textContent=w3wWords?'///'+w3wWords:'No API key';
+  pin.bindPopup(`<b>${w3wWords?'///'+w3wWords:'No key'}</b><br>${lat.toFixed(5)},${lng.toFixed(5)}<br>Fence: ${inFence||'None'}`).openPopup();
+  const row={time:new Date().toLocaleTimeString(),ani,w3w:w3wWords||'—',fence:inFence||'Outside'};
+  incidents.unshift(row);
+  $('logCount').textContent=incidents.length;
+  const tbody=$('incidentLog');
+  tbody.innerHTML=incidents.slice(0,50).map(r=>`<tr><td>${r.time}</td><td class="mono">${r.ani}</td><td>${r.w3w}</td><td class="${r.fence==='Outside'?'false':'true'}">${r.fence}</td></tr>`).join('');
+  if(inFence)showAlert('PIN INSIDE — '+inFence,'success');
+  else showAlert('PIN OUTSIDE — No active fence match','error');
+  const incoming=$('incomingStrip');
+  incoming.style.display='block';
+  setTimeout(()=>incoming.style.display='none',4000);
+}
+function parseAndDrop(text){
+  if(!text.trim())return;
+  const get=r=>(text.match(r)||[])[1]?.trim();
+  let lat=parseFloat(get(/LAT\s*[:=]\s*([\d.\-]+)/i)||'');
+  let lng=parseFloat(get(/LON\s*[:=]\s*([\d.\-]+)/i)||get(/LNG\s*[:=]\s*([\d.\-]+)/i)||'');
+  if(!isNaN(lat)&&!isNaN(lng)){dropPin(lat,lng,text);return;}
+  const coordMatch=text.match(/([\-]?\d{1,3}\.\d{3,})[\s,]+([\-]?\d{1,3}\.\d{3,})/);
+  if(coordMatch){dropPin(parseFloat(coordMatch[1]),parseFloat(coordMatch[2]),text);return;}
+  alert('Could not extract LAT/LON from payload.');
+}
+$('parseBtn').onclick=()=>parseAndDrop($('aliInput').value);
+$('clearPinBtn').onclick=()=>{if(pin)map.removeLayer(pin);pin=null;$('sCoord').textContent='—';$('sW3W').textContent='—';$('sGeo').textContent='—';$('sGeo').className='big unknown';$('sANI').textContent='—';$('rawPayload').textContent='—';$('payloadStatus').textContent='awaiting';};
+$('sampleBtn').onclick=()=>{$('aliInput').value='ANI: 4235550148\nALI_NAME: TEST CALLER\nCALL_TYPE: MOCK WIRELESS\nLAT: 35.0745\nLON: -85.6261\nADDRESS: 123 Main St Jasper TN';};
+$('closeModal').onclick=()=>$('wordModal').style.display='none';
+$('listWordsBtn').onclick=async()=>{
+  const key=getKey();
+  if(!key){alert('Enter a what3words API key first.');return;}
+  if(!fences.length){alert('Draw a fence first.');return;}
+  const f=fences[0];
+  const bounds=f.layer.getBounds();
+  const step=0.000027;
+  const latRange=bounds.getNorth()-bounds.getSouth();
+  const lngRange=bounds.getEast()-bounds.getWest();
+  const cells=Math.round((latRange/step)*(lngRange/step));
+  if(cells>400){alert('Fence too large — would require ~'+cells+' API calls. Draw a smaller fence (a few city blocks max).');return;}
+  $('wordList').textContent='Loading grid...';
+  $('wordModal').style.display='flex';
+  const words=[];
+  for(let lat=bounds.getSouth();lat<bounds.getNorth();lat+=step){
+    for(let lng=bounds.getWest();lng<bounds.getEast();lng+=step){
+      try{
+        const r=await fetch(`https://api.what3words.com/v3/convert-to-3wa?coordinates=${lat.toFixed(6)},${lng.toFixed(6)}&key=${key}`);
+        const d=await r.json();
+        if(d.words)words.push(d.words);
+      }catch(e){}
+    }
+  }
+  $('wordList').innerHTML=words.length?words.map(w=>`<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)">///`+w+`</div>`).join('')+'<div style="margin-top:8px;color:var(--muted)">'+(words.length)+' cells found</div>':'No words found — check API key and fence.';
+};
+$('w3wGridBtn').onclick=async()=>{
+  const key=getKey();
+  if(!key){alert('Enter a what3words API key first.');return;}
+  const bounds=map.getBounds();
+  try{
+    const r=await fetch(`https://api.what3words.com/v3/grid-section?bounding-box=${bounds.getSouth().toFixed(6)},${bounds.getWest().toFixed(6)},${bounds.getNorth().toFixed(6)},${bounds.getEast().toFixed(6)}&key=${key}`);
+    const d=await r.json();
+    if(d.lines){
+      d.lines.forEach(line=>L.polyline([[line.start.lat,line.start.lng],[line.end.lat,line.end.lng]],{color:'#2a7de0',weight:.6,opacity:.4}).addTo(map));
+    }
+  }catch(e){alert('Grid load failed.');}
+};
+setInterval(()=>{
+  try{
+    const q=JSON.parse(sessionStorage.getItem('cad_queue')||'[]');
+    if(q.length){
+      const call=q.shift();
+      sessionStorage.setItem('cad_queue',JSON.stringify(q));
+      const incoming=$('incomingStrip');
+      incoming.style.display='block';
+      setTimeout(()=>incoming.style.display='none',4000);
+      parseAndDrop(call.payload);
+    }
+  }catch(e){}
+},1000);
+</script>
+</body>
+</html>
