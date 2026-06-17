@@ -1,365 +1,556 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>911 CAD Console</title>
-<link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
-<style>
-:root,[data-theme="light"]{
-  --bg:#f4f1eb;--surface:#faf8f4;--surface2:#f2eee7;--surface3:#ece6de;--offset:#e6dfd6;--border:#d5cec4;
-  --text:#211d17;--muted:#706b63;--faint:#9b958b;--primary:#0c6668;--primaryh:#094d4f;--success:#3f7326;--error:#9e2d67;--warn:#8e511f;
-  --accentwash:rgba(12,102,104,.08);--successwash:rgba(63,115,38,.10);--errorwash:rgba(158,45,103,.10);
-  --radius-sm:6px;--radius-lg:10px;--font:'Satoshi',system-ui,sans-serif;
-  --shadow-sm:0 1px 2px rgba(31,29,24,.05);--shadow-md:0 8px 24px rgba(31,29,24,.08);--shadow-lg:0 16px 50px rgba(31,29,24,.12);
-}
-[data-theme="dark"]{
-  --bg:#0a0b0e;--surface:#111318;--surface2:#161820;--surface3:#1d2029;--offset:#242835;--border:#2e3240;
-  --text:#edeef5;--muted:#9599ae;--faint:#5a5e70;--primary:#2a7de0;--primaryh:#3c8cf0;--success:#21c57b;--error:#ff4b6a;--warn:#ffb545;
-  --accentwash:rgba(42,125,224,.16);--successwash:rgba(33,197,123,.16);--errorwash:rgba(255,75,106,.16);
-  --shadow-sm:0 1px 2px rgba(0,0,0,.6);--shadow-md:0 10px 30px rgba(0,0,0,.55);--shadow-lg:0 16px 40px rgba(0,0,0,.7);
-}
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;overflow:hidden}
-body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.4}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;background:
-  radial-gradient(circle at top right,rgba(42,125,224,.12),transparent 40%),
-  radial-gradient(circle at bottom left,rgba(12,102,104,.1),transparent 35%)}
-button,input,textarea,select{font:inherit;color:inherit} button{cursor:pointer}
-.app{position:relative;display:grid;grid-template-columns:minmax(380px,420px) minmax(0,1fr);height:100dvh}
-.phone{position:relative;z-index:1;background:color-mix(in srgb,var(--surface) 96%,transparent);backdrop-filter:blur(18px);border-right:1px solid var(--border);overflow:auto;padding:14px 16px;display:grid;gap:10px;box-shadow:12px 0 32px rgba(0,0,0,.4)}
-.mapWrap{position:relative;z-index:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-#map{flex:1 1 0;min-height:0;width:100%;display:block}
-.bottomPane{flex:0 0 265px;border-top:1px solid var(--border);background:linear-gradient(180deg,var(--surface2),var(--surface));padding:12px 14px;overflow:auto}
-.card{background:linear-gradient(180deg,var(--surface2),var(--surface3));border:1px solid rgba(255,255,255,.03);border-radius:var(--radius-lg);padding:11px 12px;box-shadow:var(--shadow-sm)}
-.heroCard{border-radius:var(--radius-lg);background:radial-gradient(circle at top left,rgba(42,125,224,.2),transparent 60%),linear-gradient(180deg,var(--surface2),var(--surface3));border:1px solid rgba(42,125,224,.45);box-shadow:0 0 0 1px rgba(0,0,0,.7),var(--shadow-md)}
-.kicker{display:inline-flex;align-items:center;gap:6px;font-size:9px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
-.kicker::before{content:'';width:7px;height:7px;border-radius:2px;background:#21c57b;box-shadow:0 0 7px rgba(33,197,123,.9)}
-.heroTitle{margin:5px 0 3px;font-size:19px;line-height:1.05;letter-spacing:.2em;text-transform:uppercase}
-.heroSub{color:var(--muted);font-size:11px;max-width:38ch}
-.sh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
-.sh strong{font-size:10px;text-transform:uppercase;letter-spacing:.18em;color:var(--text)}
-.btns{display:flex;gap:6px;flex-wrap:wrap}
-.btn{min-height:30px;padding:5px 9px;border-radius:4px;border:1px solid rgba(255,255,255,.04);background:var(--offset);color:var(--text);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.1em;box-shadow:inset 0 -1px 0 rgba(0,0,0,.5)}
-.btn:hover{filter:brightness(1.15)}
-.btn.primary{background:linear-gradient(180deg,var(--primaryh),var(--primary));border-color:rgba(42,125,224,.7);color:#fff}
-.btn.ghost{background:linear-gradient(180deg,var(--surface3),var(--surface2));border-color:rgba(255,255,255,.06)}
-.btn.small{min-height:26px;padding:4px 8px;font-size:10px}
-.inp,textarea,select{width:100%;padding:7px 9px;border-radius:5px;border:1px solid rgba(255,255,255,.05);background:radial-gradient(circle at top left,rgba(255,255,255,.04),rgba(0,0,0,.75));color:var(--text);font-size:12px}
-[data-theme="light"] .inp,[data-theme="light"] textarea,[data-theme="light"] select{background:rgba(255,255,255,.7);border-color:var(--border)}
-.inp:focus,textarea:focus,select:focus{outline:none;border-color:rgba(42,125,224,.8);box-shadow:0 0 0 3px rgba(42,125,224,.22)}
-textarea{min-height:110px;resize:vertical;font-family:ui-monospace,monospace;font-size:11px}
-.mono{font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums}
-.muted{color:var(--muted)}
-.statusgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.status{padding:7px 9px;border-radius:6px;background:linear-gradient(180deg,var(--surface3),var(--surface2));border:1px solid rgba(255,255,255,.04)}
-.status strong{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.18em;color:var(--muted)}
-.big{font-size:17px;font-weight:700;margin-top:3px;letter-spacing:.1em;text-transform:uppercase}
-.true{color:var(--success)} .false{color:var(--error)} .unknown{color:var(--warn)}
-.alertBanner{position:absolute;left:0;right:0;top:0;z-index:700;background:linear-gradient(90deg,rgba(33,197,123,.25),rgba(10,16,18,.95));border-bottom:2px solid rgba(33,197,123,.9);color:var(--success);padding:6px 14px;font-weight:800;font-size:12px;letter-spacing:.2em;text-transform:uppercase;display:none}
-.mapTopbar{position:absolute;left:0;right:0;top:0;z-index:650;display:flex;justify-content:space-between;gap:10px;padding:6px 14px;background:linear-gradient(90deg,rgba(0,0,0,.9),rgba(8,10,20,.88));border-bottom:1px solid rgba(255,255,255,.07)}
-.mapChip{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-.dotLive{width:7px;height:7px;border-radius:2px;background:var(--success);box-shadow:0 0 6px rgba(33,197,123,.9)}
-.log{max-height:195px;overflow:auto;border:1px solid rgba(255,255,255,.04);border-radius:7px;background:radial-gradient(circle at top,#141620,#08090e)}
-[data-theme="light"] .log{background:var(--surface);border-color:var(--border)}
-.log table{width:100%;border-collapse:collapse}
-.log td,.log th{padding:7px 8px;border-bottom:1px solid rgba(255,255,255,.03);text-align:left;vertical-align:top;font-size:11px}
-[data-theme="light"] .log td,[data-theme="light"] .log th{border-bottom:1px solid var(--border)}
-.log th{font-size:9px;text-transform:uppercase;letter-spacing:.18em;color:var(--muted);position:sticky;top:0;background:#101118}
-[data-theme="light"] .log th{background:var(--surface)}
-.fenceList,.attachmentList{display:grid;gap:6px}
-.item{padding:7px 9px;border:1px solid rgba(255,255,255,.04);border-radius:6px;background:linear-gradient(180deg,var(--surface3),var(--surface2))}
-[data-theme="light"] .item{background:var(--surface);border-color:var(--border)}
-.pill{display:inline-flex;align-items:center;border-radius:4px;padding:3px 6px;background:var(--offset);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);border:1px solid rgba(255,255,255,.05)}
-.modalBack{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
-.modal{width:min(760px,100%);background:radial-gradient(circle at top left,#191b26,#08080d);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:14px 15px;box-shadow:var(--shadow-lg);max-height:90dvh;overflow:auto}
-[data-theme="light"] .modal{background:var(--surface)}
-.previewBox{margin-top:7px;padding:7px 9px;border:1px dashed rgba(255,255,255,.16);border-radius:7px;background:radial-gradient(circle at top,#161925,#0e0f16);white-space:pre-wrap;font-size:11px}
-[data-theme="light"] .previewBox{background:var(--surface2);border-color:var(--border)}
-.dualCol{display:grid;grid-template-columns:1.1fr .9fr;gap:10px;margin-top:10px}
-label{display:block;margin-bottom:4px;font-size:9px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
-.incomingStrip{display:none;position:relative;z-index:2;background:linear-gradient(90deg,rgba(255,181,69,.2),rgba(10,14,20,.96));border-bottom:2px solid rgba(255,181,69,.9);padding:8px 14px;font-weight:800;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--warn);animation:pulseStrip 1s ease-in-out infinite}
-@keyframes pulseStrip{0%,100%{opacity:1}50%{opacity:.7}}
-@media(max-width:1000px){.app{grid-template-columns:1fr;grid-template-rows:auto 56dvh}.phone{border-right:none;border-bottom:1px solid var(--border)}.bottomPane{flex:0 0 44%}.dualCol{grid-template-columns:1fr}}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>W3W Dispatch Console</title>
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+  <style>
+    :root,[data-theme="light"]{--bg:#f7f6f2;--surface:#f9f8f5;--surface2:#fbfbf9;--offset:#edeae5;--border:#d4d1ca;--text:#28251d;--muted:#716f68;--primary:#01696f;--primaryh:#0c4e54;--success:#437a22;--error:#a12c7b;--warn:#964219;--blue:#006494;--radius:16px;--font:'Satoshi',Inter,sans-serif;--shadow:0 12px 30px rgba(31,29,24,.08)}
+    [data-theme="dark"]{--bg:#171614;--surface:#1c1b19;--surface2:#201f1d;--offset:#242321;--border:#393836;--text:#e1dfda;--muted:#b0aca4;--primary:#4f98a3;--primaryh:#227f8b;--success:#7ab958;--error:#db70b2;--warn:#d1915f;--blue:#74acd9;--shadow:0 12px 30px rgba(0,0,0,.35)}
+    *{box-sizing:border-box} html,body{height:100%;margin:0} body{font-family:var(--font);background:var(--bg);color:var(--text)} button,input,textarea,select{font:inherit} button{cursor:pointer}
+    .app{display:grid;grid-template-columns:360px 1fr 380px;height:100dvh;overflow:hidden}
+    .panel,.detail{background:var(--surface);overflow:auto;border-right:1px solid var(--border)} .detail{border-right:none;border-left:1px solid var(--border)}
+    .maparea{position:relative;background:var(--surface2)} #map{height:100%;width:100%}
+    .section{padding:16px;border-bottom:1px solid var(--border)} .section:last-child{border-bottom:none}
+    .card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+    .stack{display:grid;gap:12px}.btns{display:flex;gap:8px;flex-wrap:wrap}.btn{padding:11px 14px;border-radius:999px;border:1px solid transparent;background:var(--offset);color:var(--text);font-weight:700}.btn.primary{background:var(--primary);color:#fff}.btn.primary:hover{background:var(--primaryh)}.btn.ghost{background:transparent;border-color:var(--border)}.btn.small{padding:8px 11px;font-size:13px}
+    .inp,textarea,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text)} textarea{min-height:140px;resize:vertical}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.muted{color:var(--muted)}
+    .statusgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.status{padding:12px;border-radius:14px;background:var(--offset);border:1px solid var(--border)} .status strong{display:block;font-size:13px;text-transform:uppercase;letter-spacing:.04em}.big{font-size:22px;font-weight:700;margin-top:4px}.true{color:var(--success)}.false{color:var(--error)}.unknown{color:var(--warn)}
+    .queue{display:grid;gap:10px}.queue-item{padding:12px;border:1px solid var(--border);border-radius:14px;background:var(--surface2)} .queue-item .top{display:flex;justify-content:space-between;gap:8px;align-items:center}.tag{display:inline-flex;align-items:center;border-radius:999px;padding:5px 9px;background:var(--offset);font-size:12px;font-weight:700}
+    .log{max-height:220px;overflow:auto;border:1px solid var(--border);border-radius:14px}.log table{width:100%;border-collapse:collapse}.log td,.log th{padding:9px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;font-size:13px}
+    .floating{position:absolute;left:16px;top:16px;z-index:500;display:flex;gap:10px;align-items:center;background:color-mix(in srgb, var(--surface) 94%, transparent);border:1px solid var(--border);padding:10px 12px;border-radius:14px;box-shadow:var(--shadow)}
+    .toast{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);background:rgba(28,27,25,.94);color:#fff;padding:12px 16px;border-radius:999px;opacity:0;pointer-events:none;transition:opacity .18s ease}.toast.show{opacity:1}
+    @media (max-width:1280px){.app{grid-template-columns:340px 1fr}.detail{grid-column:1/-1;border-left:none;border-top:1px solid var(--border);max-height:44dvh}}
+    @media (max-width:820px){.app{grid-template-columns:1fr;grid-template-rows:auto 45dvh auto}.panel,.detail{border:none;border-bottom:1px solid var(--border)}}
+  </style>
 </head>
 <body>
 <div class="app">
-  <section class="phone">
-    <div class="card heroCard">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start">
+  <!-- LEFT PANEL: Trigger + Controls + Transcript + Queue -->
+  <aside class="panel">
+    <div class="section stack">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
         <div>
-          <div class="kicker">911 CAD Training Console</div>
-          <h1 class="heroTitle">CAD Console</h1>
-          <div class="heroSub">Geofence mapping, ANI/ALI parsing, what3words lookup &amp; incident timeline</div>
+          <h1 style="margin:0 0 4px;font-size:28px;line-height:1.1;font-weight:700">W3W Dispatch</h1>
+          <div class="muted" style="font-size:13px">what3words ANI/ALI Console</div>
         </div>
-        <button class="btn ghost small" id="themeBtn" aria-label="Toggle theme">&#9680;</button>
+        <button class="btn ghost small" id="themeBtn" aria-label="Toggle theme">◐</button>
+      </div>
+
+      <!-- Inbound Trigger -->
+      <div class="card stack">
+        <strong>Inbound trigger</strong>
+        <select id="scenario" class="inp">
+          <option value="wireless_inside">Wireless — inside fence</option>
+          <option value="wireless_outside">Wireless — outside fence</option>
+          <option value="landline">Landline fixed address</option>
+        </select>
+        <textarea id="triggerPayload" class="mono">ANI: 4235550148
+ALI_NAME: TEST CALLER
+CALL_TYPE: MOCK WIRELESS
+LAT: 35.0745
+LON: -85.6261
+ADDRESS: 123 Main St Jasper TN</textarea>
+        <div class="btns">
+          <button class="btn primary" id="loadScenarioBtn">Load scenario</button>
+          <button class="btn primary" id="triggerCallBtn">Trigger inbound call</button>
+        </div>
+      </div>
+
+      <!-- Dispatcher Controls -->
+      <div class="card stack">
+        <strong>Dispatcher controls</strong>
+        <div class="btns">
+          <button class="btn ghost small" id="answerBtn">Answer</button>
+          <button class="btn ghost small" id="holdBtn">Hold</button>
+          <button class="btn ghost small" id="transferBtn">Transfer</button>
+          <button class="btn ghost small" id="endBtn">End</button>
+        </div>
+        <div class="statusgrid">
+          <div class="status"><strong>Call state</strong><div id="callStateOut" class="big unknown">Idle</div></div>
+          <div class="status"><strong>Timer</strong><div id="callTimerOut" class="big mono">00:00</div></div>
+          <div class="status"><strong>Priority</strong><div id="priorityOut" class="big">Routine</div></div>
+          <div class="status"><strong>Unit</strong><div id="unitOut" class="big">None</div></div>
+        </div>
+      </div>
+
+      <!-- Transcript Simulator -->
+      <div class="card stack">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>Transcript simulator</strong>
+          <span class="tag"><span id="transcriptCount">0</span> entries</span>
+        </div>
+        <div class="btns">
+          <button class="btn ghost small" id="addCallerBtn">Caller line</button>
+          <button class="btn ghost small" id="addDispatcherBtn">Dispatcher line</button>
+          <button class="btn ghost small" id="loadTranscriptBtn">Load sample</button>
+          <button class="btn ghost small" id="clearTranscriptBtn">Clear</button>
+        </div>
+        <select id="speakerSelect" class="inp">
+          <option value="CALLER">CALLER</option>
+          <option value="DISPATCHER">DISPATCHER</option>
+        </select>
+        <textarea id="transcriptInput" class="mono" placeholder="Type a transcript line then click Add."></textarea>
+        <div class="log">
+          <table>
+            <thead><tr><th>Time</th><th>Speaker</th><th>Text</th></tr></thead>
+            <tbody id="transcriptBody"><tr><td colspan="3" class="muted">No transcript lines yet.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Queue -->
+      <div class="card stack">
+        <strong>Queue</strong>
+        <div id="queueList" class="queue">
+          <div class="queue-item"><div class="muted">No queued calls yet.</div></div>
+        </div>
       </div>
     </div>
-    <div class="card">
-      <div class="sh"><strong>&#9881; Settings</strong></div>
-      <label>what3words API Key</label>
-      <input class="inp" id="w3wKey" type="password" placeholder="Enter your w3w API key" autocomplete="off"/>
-      <label style="margin-top:8px">Console URL (for trigger cross-tab)</label>
-      <input class="inp" id="consoleUrl" readonly value="This tab" style="color:var(--muted)"/>
-    </div>
-    <div class="card">
-      <div class="sh"><strong>&#9678; Manual ANI/ALI</strong><button class="btn ghost small" id="sampleBtn">Load Sample</button></div>
-      <textarea id="aliInput" placeholder="Paste ANI/ALI payload here&#10;&#10;ANI: 4235550148&#10;LAT: 35.0745&#10;LON: -85.6261"></textarea>
-      <div class="btns">
-        <button class="btn primary" id="parseBtn">Parse &amp; Drop Pin</button>
-        <button class="btn ghost" id="clearPinBtn">Clear Pin</button>
+  </aside>
+
+  <!-- CENTER: Map -->
+  <main class="maparea">
+    <div class="floating">
+      <div>
+        <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.05em">Geofence</div>
+        <div id="fenceLabel"><strong>Not set</strong></div>
       </div>
     </div>
-    <div class="card">
-      <div class="sh"><strong>&#9678; Live Status</strong></div>
+    <div id="map"></div>
+    <div id="toast" class="toast">Copied</div>
+  </main>
+
+  <!-- RIGHT PANEL: Payload + Status + Timeline -->
+  <aside class="detail">
+    <div class="section stack">
+      <!-- API Key + Payload -->
+      <div class="card stack">
+        <div>
+          <label for="apiKey" style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">what3words API key</label>
+          <input id="apiKey" class="inp" placeholder="Paste key for live w3w lookup">
+        </div>
+        <div>
+          <label for="payloadInput" style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Active payload</label>
+          <textarea id="payloadInput" class="mono">ANI: 4235550148
+ALI_NAME: TEST CALLER
+CALL_TYPE: MOCK WIRELESS
+LAT: 35.0745
+LON: -85.6261
+ADDRESS: 123 Main St Jasper TN</textarea>
+        </div>
+        <div class="btns">
+          <button class="btn primary" id="processBtn">Process payload</button>
+        </div>
+      </div>
+
+      <!-- Status Grid -->
       <div class="statusgrid">
-        <div class="status"><strong>Coordinate</strong><div class="big mono" id="sCoord">—</div></div>
-        <div class="status"><strong>W3W Address</strong><div class="big" id="sW3W" style="font-size:13px;word-break:break-word">—</div></div>
-        <div class="status"><strong>In Geofence</strong><div class="big" id="sGeo">—</div></div>
-        <div class="status"><strong>ANI</strong><div class="big mono" id="sANI">—</div></div>
+        <div class="status"><strong>ANI</strong><div id="aniOut" class="big mono">--</div></div>
+        <div class="status"><strong>Call type</strong><div id="callTypeOut" class="big">--</div></div>
+        <div class="status"><strong>Fence check</strong><div id="insideOut" class="big unknown">Unknown</div></div>
+        <div class="status"><strong>what3words</strong><div id="w3wOut" class="big mono" style="font-size:16px">--</div></div>
       </div>
-    </div>
-    <div class="card">
-      <div class="sh"><strong>&#9670; Active Fences</strong><button class="btn ghost small" id="clearFencesBtn">Clear All</button></div>
-      <div class="fenceList" id="fenceList"><div class="muted" style="font-size:12px;padding:6px 0">Draw a rectangle or polygon on the map.</div></div>
-    </div>
-    <div class="card">
-      <div class="sh"><strong>&#9776; Incident Log</strong><span class="pill" id="logCount">0</span></div>
-      <div class="log"><table><thead><tr><th>Time</th><th>ANI</th><th>W3W</th><th>Fence</th></tr></thead><tbody id="incidentLog"><tr><td colspan="4" style="color:var(--muted)">No incidents yet.</td></tr></tbody></table></div>
-    </div>
-  </section>
-  <div class="mapWrap">
-    <div class="incomingStrip" id="incomingStrip">&#9675; Incoming Call</div>
-    <div style="position:relative;flex:1 1 0;min-height:0">
-      <div class="alertBanner" id="alertBanner"></div>
-      <div class="mapTopbar">
-        <div style="display:flex;gap:12px;align-items:center">
-          <span class="mapChip"><span class="dotLive"></span>Live Map</span>
-          <span class="mapChip" id="fenceCount">0 Fences</span>
+
+      <!-- Extracted Location -->
+      <div class="card stack">
+        <strong>Extracted location</strong>
+        <div id="coordsOut" class="mono muted">--</div>
+        <pre id="jsonOut" class="mono" style="margin:0;white-space:pre-wrap;font-size:12px">No response yet.</pre>
+      </div>
+
+      <!-- Geofence Word Grid -->
+      <div class="card stack">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>Geofence word grid</strong>
+          <span class="tag"><span id="wordCount">0</span> cells</span>
         </div>
-        <div style="display:flex;gap:6px">
-          <button class="btn ghost small" id="w3wGridBtn">W3W Grid</button>
-          <button class="btn ghost small" id="listWordsBtn">List Words</button>
+        <div class="btns">
+          <button class="btn ghost small" id="listWordsBtn">List all w3w cells</button>
+          <button class="btn ghost small" id="clearWordsBtn">Clear</button>
+        </div>
+        <div id="wordGridWarn" class="muted" style="font-size:13px">Draw a small geofence, then click List.</div>
+        <div class="log" id="wordGridLog" style="max-height:160px">
+          <table>
+            <thead><tr><th>#</th><th>what3words address</th></tr></thead>
+            <tbody id="wordGridBody"><tr><td colspan="2" class="muted">No cells yet.</td></tr></tbody>
+          </table>
         </div>
       </div>
-      <div id="map"></div>
-    </div>
-    <div class="bottomPane">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <strong style="font-size:10px;text-transform:uppercase;letter-spacing:.18em">Parsed Payload</strong>
-        <span class="pill" id="payloadStatus">awaiting</span>
-      </div>
-      <div class="dualCol">
-        <div>
-          <label>Raw Payload</label>
-          <div class="previewBox" id="rawPayload" style="margin:0;min-height:60px;max-height:140px;overflow:auto">—</div>
+
+      <!-- Call Timeline -->
+      <div class="card stack">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <strong>Call timeline</strong>
+          <span class="tag"><span id="timelineCount">0</span> events</span>
         </div>
-        <div style="display:grid;gap:7px">
-          <div><label>Name</label><div class="item mono" id="pName">—</div></div>
-          <div><label>Address</label><div class="item mono" id="pAddr">—</div></div>
-          <div><label>Call Type</label><div class="item" id="pType">—</div></div>
+        <div class="log">
+          <table>
+            <thead><tr><th>Time</th><th>Event</th><th>Detail</th></tr></thead>
+            <tbody id="timelineBody"><tr><td colspan="3" class="muted">No call events yet.</td></tr></tbody>
+          </table>
         </div>
       </div>
     </div>
-  </div>
+  </aside>
 </div>
-<!-- Word List Modal -->
-<div class="modalBack" id="wordModal">
-  <div class="modal">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <strong style="font-size:12px;text-transform:uppercase;letter-spacing:.18em">W3W Grid — Possible Addresses in Fence</strong>
-      <button class="btn ghost small" id="closeModal">Close</button>
-    </div>
-    <div id="wordList" style="font-size:12px;color:var(--muted);font-family:ui-monospace,monospace">Select a fence and click "List Words" to enumerate w3w cells.</div>
-  </div>
-</div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+
 <script>
+// ── Theme toggle ───────────────────────────────────────────────
 (function(){
-  const html=document.documentElement;
-  let theme=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
-  html.dataset.theme=theme;
-  document.getElementById('themeBtn').onclick=()=>{
-    theme=theme==='dark'?'light':'dark';
-    html.dataset.theme=theme;
-  };
-})();
-const $=id=>document.getElementById(id);
-const map=L.map('map',{zoomControl:false,attributionControl:true}).setView([35.0745,-85.6261],14);
-L.control.zoom({position:'bottomright'}).addTo(map);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; OpenStreetMap &copy; CARTO',subdomains:'abcd',maxZoom:19}).addTo(map);
-const drawnItems=new L.FeatureGroup().addTo(map);
-new L.Control.Draw({edit:{featureGroup:drawnItems},draw:{circle:false,circlemarker:false,marker:false,polyline:false,polygon:{shapeOptions:{color:'#2a7de0',fillOpacity:.08}},rectangle:{shapeOptions:{color:'#2a7de0',fillOpacity:.08}}}}).addTo(map);
-let pin=null,fences=[],incidents=[];
-function getKey(){return $('w3wKey').value.trim();}
-function showAlert(msg,type='success'){
-  const b=$('alertBanner');
-  b.textContent=msg;
-  b.style.display='block';
-  b.style.background=type==='success'?'linear-gradient(90deg,rgba(33,197,123,.25),rgba(10,16,18,.95))':'linear-gradient(90deg,rgba(255,75,106,.25),rgba(10,16,18,.95))';
-  b.style.borderBottomColor=type==='success'?'rgba(33,197,123,.9)':'rgba(255,75,106,.9)';
-  b.style.color=type==='success'?'var(--success)':'var(--error)';
-  clearTimeout(b._t);
-  b._t=setTimeout(()=>b.style.display='none',3500);
-}
-function ptInPolygon(point,layer){
-  if(layer instanceof L.Rectangle||layer instanceof L.Polygon){
-    const latlngs=layer.getLatLngs()[0];
-    const x=point.lat,y=point.lng;
-    let inside=false;
-    for(let i=0,j=latlngs.length-1;i<latlngs.length;j=i++){
-      const xi=latlngs[i].lat,yi=latlngs[i].lng;
-      const xj=latlngs[j].lat,yj=latlngs[j].lng;
-      if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))inside=!inside;
-    }
-    return inside;
-  }
-  return false;
-}
-function checkFences(latlng){
-  for(const f of fences){
-    if(ptInPolygon(latlng,f.layer))return f.name;
-  }
-  return null;
-}
-function updateFenceUI(){
-  $('fenceCount').textContent=fences.length+' Fence'+(fences.length===1?'':'s');
-  const list=$('fenceList');
-  if(!fences.length){list.innerHTML='<div class="muted" style="font-size:12px;padding:6px 0">Draw a rectangle or polygon on the map.</div>';return;}
-  list.innerHTML=fences.map((f,i)=>`<div class="item" style="display:flex;justify-content:space-between;align-items:center"><span class="mono" style="font-size:12px">${f.name}</span><button class="btn ghost small" onclick="removeFence(${i})">Remove</button></div>`).join('');
-}
-window.removeFence=function(i){
-  drawnItems.removeLayer(fences[i].layer);
-  fences.splice(i,1);
-  updateFenceUI();
-};
-map.on(L.Draw.Event.CREATED,function(e){
-  const layer=e.layer;
-  drawnItems.addLayer(layer);
-  const name='Fence '+(fences.length+1);
-  fences.push({layer,name});
-  updateFenceUI();
-});
-map.on(L.Draw.Event.DELETED,function(e){
-  e.layers.eachLayer(l=>{
-    const idx=fences.findIndex(f=>f.layer===l);
-    if(idx>-1)fences.splice(idx,1);
+  const btn = document.getElementById('themeBtn');
+  const html = document.documentElement;
+  let theme = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+  html.setAttribute('data-theme', theme);
+  btn.addEventListener('click', () => {
+    theme = theme === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', theme);
   });
-  updateFenceUI();
+})();
+
+// ── Map ────────────────────────────────────────────────────────
+const map = L.map('map').setView([35.0745, -85.6261], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors'
+}).addTo(map);
+
+const drawnItems = new L.FeatureGroup().addTo(map);
+const drawControl = new L.Control.Draw({
+  edit: { featureGroup: drawnItems },
+  draw: { polygon: true, rectangle: true, circle: false, polyline: false, marker: false, circlemarker: false }
+}).addTo(map);
+
+let geofenceLayer = null;
+let activeMarker = null;
+const fenceLabel = document.getElementById('fenceLabel');
+
+map.on(L.Draw.Event.CREATED, e => {
+  drawnItems.clearLayers();
+  drawnItems.addLayer(e.layer);
+  geofenceLayer = e.layer;
+  fenceLabel.innerHTML = '<strong style="color:var(--success)">Fence active</strong>';
+  logTimeline('Geofence', 'Drawn on map');
 });
-$('clearFencesBtn').onclick=()=>{drawnItems.clearLayers();fences=[];updateFenceUI();};
-async function lookupW3W(lat,lng){
-  const key=getKey();
-  if(!key)return null;
-  try{
-    const r=await fetch(`https://api.what3words.com/v3/convert-to-3wa?coordinates=${lat},${lng}&key=${key}`);
-    const d=await r.json();
-    return d.words||null;
-  }catch(e){return null;}
+
+map.on(L.Draw.Event.DELETED, () => {
+  geofenceLayer = null;
+  fenceLabel.innerHTML = '<strong>Not set</strong>';
+});
+
+// ── Helpers ────────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
 }
-async function dropPin(lat,lng,payload){
-  if(pin)map.removeLayer(pin);
-  const latlng=L.latLng(lat,lng);
-  const inFence=checkFences(latlng);
-  const icon=L.divIcon({html:`<div style="width:14px;height:14px;border-radius:50%;background:${inFence?'#21c57b':'#ff4b6a'};border:2px solid #fff;box-shadow:0 0 8px rgba(0,0,0,.8)"></div>`,className:'',iconAnchor:[7,7]});
-  pin=L.marker(latlng,{icon}).addTo(map);
-  map.setView(latlng,15);
-  const get=r=>(payload.match(r)||[])[1]?.trim()||'Unknown';
-  const ani=get(/ANI\s*[:=]\s*([^\n]+)/i);
-  const name=get(/ALI_NAME\s*[:=]\s*([^\n]+)/i);
-  const addr=get(/ADDRESS\s*[:=]\s*([^\n]+)/i);
-  const type=get(/CALL_TYPE\s*[:=]\s*([^\n]+)/i);
-  $('sCoord').textContent=`${lat.toFixed(5)},${lng.toFixed(5)}`;
-  $('sANI').textContent=ani;
-  $('pName').textContent=name;
-  $('pAddr').textContent=addr;
-  $('pType').textContent=type;
-  $('rawPayload').textContent=payload;
-  $('payloadStatus').textContent='parsed';
-  const geoEl=$('sGeo');
-  if(inFence){geoEl.textContent='YES';geoEl.className='big true';}else{geoEl.textContent='NO';geoEl.className='big false';}
-  const w3wWords=await lookupW3W(lat,lng);
-  $('sW3W').textContent=w3wWords?'///'+w3wWords:'No API key';
-  pin.bindPopup(`<b>${w3wWords?'///'+w3wWords:'No key'}</b><br>${lat.toFixed(5)},${lng.toFixed(5)}<br>Fence: ${inFence||'None'}`).openPopup();
-  const row={time:new Date().toLocaleTimeString(),ani,w3w:w3wWords||'—',fence:inFence||'Outside'};
-  incidents.unshift(row);
-  $('logCount').textContent=incidents.length;
-  const tbody=$('incidentLog');
-  tbody.innerHTML=incidents.slice(0,50).map(r=>`<tr><td>${r.time}</td><td class="mono">${r.ani}</td><td>${r.w3w}</td><td class="${r.fence==='Outside'?'false':'true'}">${r.fence}</td></tr>`).join('');
-  if(inFence)showAlert('PIN INSIDE — '+inFence,'success');
-  else showAlert('PIN OUTSIDE — No active fence match','error');
-  const incoming=$('incomingStrip');
-  incoming.style.display='block';
-  setTimeout(()=>incoming.style.display='none',4000);
+
+function nowStr() {
+  return new Date().toLocaleTimeString('en-US', { hour12: false });
 }
-function parseAndDrop(text){
-  if(!text.trim())return;
-  const get=r=>(text.match(r)||[])[1]?.trim();
-  let lat=parseFloat(get(/LAT\s*[:=]\s*([\d.\-]+)/i)||'');
-  let lng=parseFloat(get(/LON\s*[:=]\s*([\d.\-]+)/i)||get(/LNG\s*[:=]\s*([\d.\-]+)/i)||'');
-  if(!isNaN(lat)&&!isNaN(lng)){dropPin(lat,lng,text);return;}
-  const coordMatch=text.match(/([\-]?\d{1,3}\.\d{3,})[\s,]+([\-]?\d{1,3}\.\d{3,})/);
-  if(coordMatch){dropPin(parseFloat(coordMatch[1]),parseFloat(coordMatch[2]),text);return;}
-  alert('Could not extract LAT/LON from payload.');
+
+// ── Timeline ───────────────────────────────────────────────────
+let timelineRows = [];
+function logTimeline(event, detail) {
+  timelineRows.unshift({ time: nowStr(), event, detail });
+  const tbody = document.getElementById('timelineBody');
+  tbody.innerHTML = timelineRows.map(r =>
+    `<tr><td class="mono">${r.time}</td><td>${r.event}</td><td class="muted">${r.detail}</td></tr>`
+  ).join('');
+  document.getElementById('timelineCount').textContent = timelineRows.length;
 }
-$('parseBtn').onclick=()=>parseAndDrop($('aliInput').value);
-$('clearPinBtn').onclick=()=>{if(pin)map.removeLayer(pin);pin=null;$('sCoord').textContent='—';$('sW3W').textContent='—';$('sGeo').textContent='—';$('sGeo').className='big unknown';$('sANI').textContent='—';$('rawPayload').textContent='—';$('payloadStatus').textContent='awaiting';};
-$('sampleBtn').onclick=()=>{$('aliInput').value='ANI: 4235550148\nALI_NAME: TEST CALLER\nCALL_TYPE: MOCK WIRELESS\nLAT: 35.0745\nLON: -85.6261\nADDRESS: 123 Main St Jasper TN';};
-$('closeModal').onclick=()=>$('wordModal').style.display='none';
-$('listWordsBtn').onclick=async()=>{
-  const key=getKey();
-  if(!key){alert('Enter a what3words API key first.');return;}
-  if(!fences.length){alert('Draw a fence first.');return;}
-  const f=fences[0];
-  const bounds=f.layer.getBounds();
-  const step=0.000027;
-  const latRange=bounds.getNorth()-bounds.getSouth();
-  const lngRange=bounds.getEast()-bounds.getWest();
-  const cells=Math.round((latRange/step)*(lngRange/step));
-  if(cells>400){alert('Fence too large — would require ~'+cells+' API calls. Draw a smaller fence (a few city blocks max).');return;}
-  $('wordList').textContent='Loading grid...';
-  $('wordModal').style.display='flex';
-  const words=[];
-  for(let lat=bounds.getSouth();lat<bounds.getNorth();lat+=step){
-    for(let lng=bounds.getWest();lng<bounds.getEast();lng+=step){
-      try{
-        const r=await fetch(`https://api.what3words.com/v3/convert-to-3wa?coordinates=${lat.toFixed(6)},${lng.toFixed(6)}&key=${key}`);
-        const d=await r.json();
-        if(d.words)words.push(d.words);
-      }catch(e){}
+
+// ── Parse ANI/ALI payload ──────────────────────────────────────
+function parsePayload(raw) {
+  const lines = raw.trim().split('\n');
+  const result = {};
+  for (const line of lines) {
+    const idx = line.indexOf(':');
+    if (idx < 0) continue;
+    const key = line.slice(0, idx).trim().toUpperCase();
+    const val = line.slice(idx + 1).trim();
+    result[key] = val;
+  }
+  // Coordinate extraction: prefer LAT/LON, fallback to ADDRESS
+  let lat = parseFloat(result['LAT'] || result['LATITUDE'] || '');
+  let lon = parseFloat(result['LON'] || result['LONG'] || result['LONGITUDE'] || '');
+  if (isNaN(lat) || isNaN(lon)) {
+    const addr = result['ADDRESS'] || '';
+    const m = addr.match(/(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)/);
+    if (m) { lat = parseFloat(m[1]); lon = parseFloat(m[2]); }
+  }
+  return { fields: result, lat, lon };
+}
+
+// ── Point-in-polygon (ray casting) ────────────────────────────
+function pointInPolygon(lat, lon, layer) {
+  if (!layer) return null;
+  let inside = false;
+  if (layer instanceof L.Rectangle || layer instanceof L.Polygon) {
+    const bounds = layer.getBounds();
+    if (bounds.contains([lat, lon])) {
+      const latlngs = layer.getLatLngs()[0];
+      let j = latlngs.length - 1;
+      for (let i = 0; i < latlngs.length; i++) {
+        const xi = latlngs[i].lat, yi = latlngs[i].lng;
+        const xj = latlngs[j].lat, yj = latlngs[j].lng;
+        const intersect = ((yi > lon) !== (yj > lon)) &&
+          (lat < (xj - xi) * (lon - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+        j = i;
+      }
     }
   }
-  $('wordList').innerHTML=words.length?words.map(w=>`<div style="padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)">///`+w+`</div>`).join('')+'<div style="margin-top:8px;color:var(--muted)">'+(words.length)+' cells found</div>':'No words found — check API key and fence.';
-};
-$('w3wGridBtn').onclick=async()=>{
-  const key=getKey();
-  if(!key){alert('Enter a what3words API key first.');return;}
-  const bounds=map.getBounds();
-  try{
-    const r=await fetch(`https://api.what3words.com/v3/grid-section?bounding-box=${bounds.getSouth().toFixed(6)},${bounds.getWest().toFixed(6)},${bounds.getNorth().toFixed(6)},${bounds.getEast().toFixed(6)}&key=${key}`);
-    const d=await r.json();
-    if(d.lines){
-      d.lines.forEach(line=>L.polyline([[line.start.lat,line.start.lng],[line.end.lat,line.end.lng]],{color:'#2a7de0',weight:.6,opacity:.4}).addTo(map));
+  return inside;
+}
+
+// ── Process payload ────────────────────────────────────────────
+document.getElementById('processBtn').addEventListener('click', processPayload);
+
+async function processPayload() {
+  const raw = document.getElementById('payloadInput').value;
+  const { fields, lat, lon } = parsePayload(raw);
+
+  document.getElementById('aniOut').textContent = fields['ANI'] || '--';
+  document.getElementById('callTypeOut').textContent = fields['CALL_TYPE'] || '--';
+
+  if (isNaN(lat) || isNaN(lon)) {
+    document.getElementById('coordsOut').textContent = 'No valid coordinates found';
+    document.getElementById('insideOut').textContent = 'Unknown';
+    document.getElementById('insideOut').className = 'big unknown';
+    logTimeline('Process', 'No coordinates in payload');
+    return;
+  }
+
+  // Drop pin
+  if (activeMarker) map.removeLayer(activeMarker);
+  activeMarker = L.marker([lat, lon]).addTo(map)
+    .bindPopup(`<b>${lat.toFixed(5)}, ${lon.toFixed(5)}</b>`).openPopup();
+  map.setView([lat, lon], 14);
+
+  document.getElementById('coordsOut').textContent = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+
+  // Fence check
+  const fenceEl = document.getElementById('insideOut');
+  if (geofenceLayer) {
+    const inside = pointInPolygon(lat, lon, geofenceLayer);
+    fenceEl.textContent = inside ? 'YES — Inside' : 'NO — Outside';
+    fenceEl.className = 'big ' + (inside ? 'true' : 'false');
+    logTimeline('Fence check', inside ? 'Caller INSIDE geofence' : 'Caller OUTSIDE geofence');
+  } else {
+    fenceEl.textContent = 'No fence set';
+    fenceEl.className = 'big unknown';
+  }
+
+  // w3w lookup
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const w3wEl = document.getElementById('w3wOut');
+  const jsonEl = document.getElementById('jsonOut');
+  if (apiKey) {
+    try {
+      const url = `https://api.what3words.com/v3/convert-to-3wa?coordinates=${lat},${lon}&key=${apiKey}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.words) {
+        w3wEl.textContent = '///' + data.words;
+        jsonEl.textContent = JSON.stringify(data, null, 2);
+        activeMarker.bindPopup(`<b>///${data.words}</b><br>${lat.toFixed(5)}, ${lon.toFixed(5)}`).openPopup();
+        logTimeline('w3w lookup', '///' + data.words);
+      } else {
+        w3wEl.textContent = 'API error';
+        jsonEl.textContent = JSON.stringify(data, null, 2);
+      }
+    } catch(e) {
+      w3wEl.textContent = 'Network error';
+      jsonEl.textContent = String(e);
     }
-  }catch(e){alert('Grid load failed.');}
-};
-setInterval(()=>{
-  try{
-    const q=JSON.parse(sessionStorage.getItem('cad_queue')||'[]');
-    if(q.length){
-      const call=q.shift();
-      sessionStorage.setItem('cad_queue',JSON.stringify(q));
-      const incoming=$('incomingStrip');
-      incoming.style.display='block';
-      setTimeout(()=>incoming.style.display='none',4000);
-      parseAndDrop(call.payload);
+  } else {
+    w3wEl.textContent = 'No API key';
+    jsonEl.textContent = 'Add a what3words API key to enable live lookup.';
+  }
+
+  logTimeline('Payload processed', `ANI: ${fields['ANI'] || 'N/A'} @ ${lat.toFixed(4)},${lon.toFixed(4)}`);
+}
+
+// ── Word grid listing ──────────────────────────────────────────
+document.getElementById('listWordsBtn').addEventListener('click', listGeofenceWords);
+document.getElementById('clearWordsBtn').addEventListener('click', () => {
+  document.getElementById('wordGridBody').innerHTML = '<tr><td colspan="2" class="muted">No cells yet.</td></tr>';
+  document.getElementById('wordCount').textContent = '0';
+  document.getElementById('wordGridWarn').textContent = 'Draw a small geofence, then click List.';
+});
+
+async function listGeofenceWords() {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const warn = document.getElementById('wordGridWarn');
+  const tbody = document.getElementById('wordGridBody');
+
+  if (!geofenceLayer) { warn.textContent = 'Draw a geofence first.'; return; }
+  if (!apiKey) { warn.textContent = 'Add a what3words API key to list cells.'; return; }
+
+  const bounds = geofenceLayer.getBounds();
+  const step = 0.000027; // ~3 metres
+  const latRange = bounds.getNorth() - bounds.getSouth();
+  const lonRange = bounds.getEast() - bounds.getWest();
+  const cells = Math.ceil(latRange / step) * Math.ceil(lonRange / step);
+
+  if (cells > 500) {
+    warn.textContent = `Geofence too large (≈${cells.toLocaleString()} cells). Draw a smaller area.`;
+    return;
+  }
+
+  warn.textContent = `Fetching ≈${cells} cells…`;
+  tbody.innerHTML = '';
+  let count = 0;
+
+  for (let lat = bounds.getSouth(); lat <= bounds.getNorth(); lat += step) {
+    for (let lon = bounds.getWest(); lon <= bounds.getEast(); lon += step) {
+      if (!pointInPolygon(lat, lon, geofenceLayer) && geofenceLayer instanceof L.Polygon) {
+        // skip if polygon and outside — rectangles always contain
+      }
+      try {
+        const res = await fetch(`https://api.what3words.com/v3/convert-to-3wa?coordinates=${lat.toFixed(6)},${lon.toFixed(6)}&key=${apiKey}`);
+        const data = await res.json();
+        if (data.words) {
+          count++;
+          const tr = document.createElement('tr');
+          tr.innerHTML = `<td class="mono muted">${count}</td><td class="mono">///${data.words}</td>`;
+          tbody.appendChild(tr);
+          document.getElementById('wordCount').textContent = count;
+        }
+      } catch(e) { /* skip on error */ }
     }
-  }catch(e){}
-},1000);
+  }
+  warn.textContent = `Found ${count} w3w cells inside geofence.`;
+}
+
+// ── Scenarios ─────────────────────────────────────────────────
+const SCENARIOS = {
+  wireless_inside: `ANI: 4235550148\nALI_NAME: TEST CALLER\nCALL_TYPE: WIRELESS 911\nLAT: 35.0745\nLON: -85.6261\nADDRESS: 123 Main St Jasper TN`,
+  wireless_outside: `ANI: 4235550199\nALI_NAME: OUT OF AREA CALLER\nCALL_TYPE: WIRELESS 911\nLAT: 35.1200\nLON: -85.7100\nADDRESS: Hwy 28 Marion County TN`,
+  landline: `ANI: 4235550177\nALI_NAME: RESIDENCE\nCALL_TYPE: WIRELINE\nLAT: 35.0612\nLON: -85.6155\nADDRESS: 456 Oak Ave Jasper TN 37347`
+};
+
+document.getElementById('loadScenarioBtn').addEventListener('click', () => {
+  const key = document.getElementById('scenario').value;
+  const payload = SCENARIOS[key];
+  document.getElementById('triggerPayload').value = payload;
+  document.getElementById('payloadInput').value = payload;
+});
+
+// ── Inbound call trigger ───────────────────────────────────────
+let callTimer = null, callSeconds = 0, callState = 'idle';
+
+function setCallState(state) {
+  callState = state;
+  const el = document.getElementById('callStateOut');
+  el.textContent = state.charAt(0).toUpperCase() + state.slice(1);
+  el.className = 'big ' + (state === 'active' ? 'true' : state === 'hold' ? 'unknown' : state === 'ended' ? 'false' : 'unknown');
+}
+
+document.getElementById('triggerCallBtn').addEventListener('click', () => {
+  const payload = document.getElementById('triggerPayload').value;
+  document.getElementById('payloadInput').value = payload;
+  setCallState('ringing');
+  addToQueue(payload);
+  logTimeline('Inbound call', 'Ringing — trigger fired');
+  showToast('Inbound call triggered');
+});
+
+document.getElementById('answerBtn').addEventListener('click', () => {
+  if (callState === 'idle' && document.getElementById('queueList').querySelectorAll('.queue-item').length > 0) return;
+  setCallState('active');
+  callSeconds = 0;
+  clearInterval(callTimer);
+  callTimer = setInterval(() => {
+    callSeconds++;
+    const m = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+    const s = String(callSeconds % 60).padStart(2, '0');
+    document.getElementById('callTimerOut').textContent = m + ':' + s;
+  }, 1000);
+  document.getElementById('priorityOut').textContent = 'Priority';
+  document.getElementById('unitOut').textContent = 'EMS-1';
+  logTimeline('Call answered', 'Timer started');
+  processPayload();
+});
+
+document.getElementById('holdBtn').addEventListener('click', () => {
+  setCallState('hold');
+  clearInterval(callTimer);
+  logTimeline('Call held', '');
+});
+
+document.getElementById('transferBtn').addEventListener('click', () => {
+  logTimeline('Transfer', 'Transferring to secondary PSAP');
+  showToast('Call transferred');
+});
+
+document.getElementById('endBtn').addEventListener('click', () => {
+  setCallState('ended');
+  clearInterval(callTimer);
+  logTimeline('Call ended', `Duration: ${document.getElementById('callTimerOut').textContent}`);
+});
+
+// ── Queue ──────────────────────────────────────────────────────
+function addToQueue(payload) {
+  const { fields } = parsePayload(payload);
+  const queueList = document.getElementById('queueList');
+  const existing = queueList.querySelector('.muted');
+  if (existing && existing.closest('.queue-item')) {
+    queueList.innerHTML = '';
+  }
+  const item = document.createElement('div');
+  item.className = 'queue-item';
+  item.innerHTML = `<div class="top"><span><strong>${fields['ANI'] || 'Unknown'}</strong> &mdash; ${fields['CALL_TYPE'] || 'Unknown'}</span><span class="tag" style="color:var(--warn)">Ringing</span></div><div class="muted" style="font-size:13px;margin-top:4px">${fields['ADDRESS'] || 'No address'}</div>`;
+  queueList.prepend(item);
+}
+
+// ── Transcript ─────────────────────────────────────────────────
+let transcriptRows = [];
+function addTranscriptLine(speaker, text) {
+  transcriptRows.push({ time: nowStr(), speaker, text });
+  const tbody = document.getElementById('transcriptBody');
+  tbody.innerHTML = transcriptRows.map(r =>
+    `<tr><td class="mono muted">${r.time}</td><td><strong>${r.speaker}</strong></td><td>${r.text}</td></tr>`
+  ).join('');
+  document.getElementById('transcriptCount').textContent = transcriptRows.length;
+}
+
+document.getElementById('addCallerBtn').addEventListener('click', () => {
+  const inp = document.getElementById('transcriptInput');
+  if (inp.value.trim()) addTranscriptLine('CALLER', inp.value.trim());
+  inp.value = '';
+});
+
+document.getElementById('addDispatcherBtn').addEventListener('click', () => {
+  const inp = document.getElementById('transcriptInput');
+  addTranscriptLine('DISPATCHER', inp.value.trim() || '[no text]');
+  inp.value = '';
+});
+
+document.getElementById('loadTranscriptBtn').addEventListener('click', () => {
+  const samples = [
+    ['CALLER', '911 what is your emergency?'],
+    ['DISPATCHER', 'I need help, there has been an accident on Main Street.'],
+    ['CALLER', 'Can you confirm your location?'],
+    ['DISPATCHER', 'Yes, I am at 123 Main Street near the stoplight.'],
+    ['CALLER', 'Are there any injuries?'],
+    ['DISPATCHER', 'Yes, one person is hurt, please hurry.']
+  ];
+  transcriptRows = [];
+  samples.forEach(([s, t]) => addTranscriptLine(s, t));
+});
+
+document.getElementById('clearTranscriptBtn').addEventListener('click', () => {
+  transcriptRows = [];
+  document.getElementById('transcriptBody').innerHTML = '<tr><td colspan="3" class="muted">No transcript lines yet.</td></tr>';
+  document.getElementById('transcriptCount').textContent = '0';
+});
 </script>
 </body>
 </html>
